@@ -1,0 +1,398 @@
+#############Back_propagation
+import numpy as np
+X = np.array(([2, 9], [1, 5], [3, 6]), dtype=float)
+y = np.array(([92], [86], [89]), dtype=float)
+X = X/np.amax(X,axis=0) #maximum of X array longitudinally
+y = y/100
+#Sigmoid Function
+def sigmoid (x):
+    return 1/(1 + np.exp(-x))
+#Derivative of Sigmoid Function
+def derivatives_sigmoid(x):
+    return x * (1 - x)
+#Variable initialization
+epoch=5 #Setting training iterations
+lr=0.1 #Setting learning rate
+inputlayer_neurons = 2 #number of features in data set
+hiddenlayer_neurons = 1 #number of hidden layers neurons
+output_neurons = 1 #number of neurons at output layer
+#weight and bias initialization
+wh=np.random.uniform(size=(inputlayer_neurons,hiddenlayer_neurons))
+bh=np.random.uniform(size=(1,hiddenlayer_neurons))
+wout=np.random.uniform(size=(hiddenlayer_neurons,output_neurons))
+bout=np.random.uniform(size=(1,output_neurons))
+#draws a random range of numbers uniformly of dim x*y
+for i in range(epoch):
+    #Forward Propogation
+    hinp1=np.dot(X,wh)
+    hinp=hinp1 + bh
+    hlayer_act = sigmoid(hinp)
+    outinp1=np.dot(hlayer_act,wout)
+    outinp= outinp1+bout
+    output = sigmoid(outinp)
+    #Backpropagation
+    EO = y-output
+    outgrad = derivatives_sigmoid(output)
+    d_output = EO * outgrad
+    EH = d_output.dot(wout.T)
+    hiddengrad = derivatives_sigmoid(hlayer_act)#how much hidden layer wts contributed to error
+    d_hiddenlayer = EH * hiddengrad
+    wout += hlayer_act.T.dot(d_output) *lr   # dotproduct of nextlayererror and currentlayerop
+    wh += X.T.dot(d_hiddenlayer) *lr
+    print ("-----------Epoch-", i+1, "Starts----------")
+    print("Input: \n" + str(X))
+    print("Actual Output: \n" + str(y))
+    print("Predicted Output: \n" ,output)
+    print ("-----------Epoch-", i+1, "Ends----------\n")
+print("Input: \n" + str(X))
+print("Actual Output: \n" + str(y))
+print("Predicted Output: \n" ,output)
+
+######################E-M
+import matplotlib.pyplot as plt
+from sklearn import datasets
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
+import numpy as np
+iris = datasets.load_iris()
+X = pd.DataFrame(iris.data)
+X.columns = ['Sepal_Length','Sepal_width','Petal_Length','Petal_width']
+y = pd.DataFrame(iris.target)
+y.columns = ['Targets']
+# Build the K Means Model
+model=KMeans(n_clusters=3, random_state=0).fit(X)
+plt.figure(figsize=(10,7))
+colormap = np.array(['red', 'lime', 'black'])
+# Plot the original Classifications using Petal features
+plt.subplot(2, 3, 1)
+plt.scatter(X.Petal_Length, X.Petal_width, c=colormap[y.Targets])
+plt.title('Real Clusters')
+plt.xlabel('Petal Length')
+plt.ylabel('Petal width')
+plt.subplot(2, 3, 2)
+plt.scatter(X.Petal_Length, X.Petal_width, c=colormap[model.labels_])
+plt.title('K-Means Clustering')
+plt.xlabel('Petal Length')
+plt.ylabel('Petal width')
+gmm=GaussianMixture(n_components=3, random_state=0).fit(X)
+gmm_y=gmm.predict(X)
+plt.subplot(2, 3, 3)
+plt.scatter (X.Petal_Length, X.Petal_width, c=colormap[gmm_y])
+plt.title('GMM Clustering')
+plt.xlabel('Petal Length')
+plt.ylabel('Petal width')
+print('Observation: The GMM using EM algorithm based clustering matched the true labels more closely than the Kmeans.')
+
+##################################KNN
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn import datasets
+#Load dataset
+iris=datasets.load_iris()
+print("Iris Data set loaded...")
+#print(iris)
+# Split the data into train and test samples
+x_train, x_test, y_train, y_test = train_test_split(iris.data,iris.target,test_size=0.1)
+classifier = KNeighborsClassifier(5)
+#Perform Training
+classifier.fit(x_train, y_train)
+# Perform testing
+y_pred=classifier.predict(x_test)
+# Display the results
+print("Results of Classification using K-nn with K=1")
+for r in range(0,len(x_test)):
+      print(" Sample:", str(x_test[r]), " Actual-label:", str(y_test[r]), "Predicted-label:", str(y_pred[r]))
+      #print("Classification Accuracy:", classifier.score(x_test,y_test));
+from sklearn.metrics import classification_report, confusion_matrix
+print('Confusion Matrix')
+print(confusion_matrix(y_test,y_pred))
+print('Accuracy Metrics')
+print(classification_report(y_test,y_pred))
+
+########################LOCALLY-WEIGHTED-REGRESSION
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+data=pd.read_csv("D:\\ML_LAB\\10-dataset.csv")
+data
+# kernel smoothing function
+def kernel(point,xmat,k):
+  m,n=np.shape(xmat)
+  weights=np.mat(np.eye((m)))
+  for j in range(m):
+    diff=point-xmat[j]
+    weights[j,j]=np.exp(diff*diff.T/(-2.0*k**2))
+  return weights
+# function to return local weight of eah traiining example
+def localweight(point,xmat,ymat,k):
+   wt = kernel(point,xmat,k)
+   W = (xmat.T*(wt*xmat)).I*(xmat.T*wt*ymat.T)
+   return W
+# root function that drives the algorithm
+def localWeightRegression(xmat,ymat,k):
+  m,n=np.shape(xmat)
+  ypred=np.zeros(m)
+  for i in range(m):
+    ypred[i]=xmat[i]*localweight(xmat[i], xmat, ymat, k)
+  return ypred
+cola=np.array(data['total_bill'])
+colb=np.array(data['tip'])
+mcola=np.mat(cola)
+mcolb=np.mat(colb)
+m=np.shape(mcolb)[1]
+one=np.ones((1,m))
+x=np.hstack((one.T,mcola.T))
+ypred=localWeightRegression(x,mcolb,0.8)
+# plotting the predicted graph
+xsort=x.copy()
+xsort.sort(axis=0)
+plt.scatter(cola,colb,color='blue')
+plt.plot(xsort[:, 1],ypred [x[:, 1].argsort(0)],color='yellow',linewidth=5)
+plt.xlabel('Total Bill')
+plt.ylabel('Tip')
+plt.show()
+
+#######################ID3 Algorithm
+import math
+import csv
+def load_csv(filename):
+    lines=csv.reader(open(filename,"r"));
+    dataset = list(lines)
+    headers = dataset.pop(0)
+    return dataset,headers
+class Node:
+    def __init__(self,attribute):
+        self.attribute=attribute
+        self.children=[]
+        self.answer=""
+def subtables(data,col,delete):
+    dic={}
+    coldata=[row[col] for row in data]
+    attr=list(set(coldata))
+    counts=[0]*len(attr)
+    r=len(data)
+    c=len(data[0])
+    for x in range(len(attr)):
+        for y in range(r):
+            if data[y][col]==attr[x]:
+                counts[x]+=1
+    for x in range(len(attr)):
+        dic[attr[x]]=[[0 for i in range(c)] for j in range(counts[x])]
+        pos=0
+        for y in range(r):
+            if data[y][col]==attr[x]:
+                if delete:
+                    del data[y][col]
+                dic[attr[x]][pos]=data[y]
+                pos+=1
+    return attr,dic
+def entropy(S):
+    attr=list(set(S))
+    if len(attr)==1:
+        return 0
+    counts=[0,0]
+    for i in range(2):
+        counts[i]=sum([1 for x in S if attr[i]==x])/(len(S)*1.0)
+    sums=0
+    for cnt in counts:
+        sums+=-1*cnt*math.log(cnt,2)
+    return sums
+def compute_gain(data,col):
+    attr,dic = subtables(data,col,delete=False)
+    total_size=len(data)
+    entropies=[0]*len(attr)
+    ratio=[0]*len(attr)
+    total_entropy=entropy([row[-1] for row in data])
+    for x in range(len(attr)):
+        ratio[x]=len(dic[attr[x]])/(total_size*1.0)
+        entropies[x]=entropy([row[-1] for row in dic[attr[x]]])
+        total_entropy-=ratio[x]*entropies[x]
+    return total_entropy
+def build_tree(data,features):
+    lastcol=[row[-1] for row in data]
+    if(len(set(lastcol)))==1:
+        node=Node("")
+        node.answer=lastcol[0]
+        return node
+    n=len(data[0])-1
+    gains=[0]*n
+    for col in range(n):
+        gains[col]=compute_gain(data,col)
+    split=gains.index(max(gains))
+    node=Node(features[split])
+    fea = features[:split]+features[split+1:]
+    attr,dic=subtables(data,split,delete=True)
+    for x in range(len(attr)):
+        child=build_tree(dic[attr[x]],fea)
+        node.children.append((attr[x],child))
+    return node
+def print_tree(node,level):
+    if node.answer!="":
+        print("  "*level,node.answer)
+        return
+    print("  "*level,node.attribute)
+    for value,n in node.children:
+        print("  "*(level+1),value)
+        print_tree(n,level+2)
+def classify(node,x_test,features):
+    if node.answer!="":
+        print(node.answer)
+        return
+    pos=features.index(node.attribute)
+    for value, n in node.children:
+        if x_test[pos]==value:
+            classify(n,x_test,features)
+'''Main program'''
+dataset,features=load_csv('play_tennis.csv')
+node1=build_tree(dataset,features)
+print("The decision tree for the dataset using ID3 algorithm is")
+print_tree(node1,0)
+testdata,features=load_csv('play_tennis.csv')
+for xtest in testdata:
+    print("The test instance:",xtest)
+    print("The label for test instance:",end="   ")
+    classify(node1,xtest,features)
+
+####################################NAIVE_BAYESIAN-CLASSIFIER
+import pandas as pd
+import numpy as np
+df=pd.read_csv("D:\\ML_LAB\\text_classification.csv")
+df_train=df[:10]
+pos=""
+neg=""
+df_train=np.array(df_train)
+vocab=[]
+poscnt=0
+negcnt=0
+for i in range(len(df_train)):
+  if df_train[i][1]=='pos':
+    pos=pos+" "+df_train[i][0]
+    poscnt+=1
+  else:
+    neg=neg+" "+df_train[i][0]
+    negcnt+=1
+  vocab.extend(df_train[i][0].split(" "))
+vocab=set(vocab)
+n_yes=len(set(pos.split(" ")))
+n_no=len(set(neg.split(" ")))
+d={}
+for i in vocab:
+  res=[]
+  #computing for yes
+  nk_yes=pos.count(i)
+  res.append((nk_yes+1)/(n_yes+len(vocab)))
+  nk_no=neg.count(i)
+  res.append((nk_no+1)/(n_no+len(vocab)))
+  d[i]=res
+#preproccesing done
+for i in d.keys():
+  print(i,d[i])
+df_test=df[11:]
+df_test=np.array(df_test)
+tp=0
+fp=0
+tn=0
+fn=0
+for i in range(len(df_test)):
+  pyes=poscnt/10
+  pno=negcnt/10
+  words=df_test[i][0].split(" ")
+  for word in words:
+    if word in d.keys():
+      pyes*=d[word][0]
+      pno*=d[word][1]
+    if pyes>pno:
+      if df_test[i][1]=='pos':
+        tp+=1
+      else:
+        fp+=1
+    if pno>pyes:
+      if df_test[i][1]=='neg':
+        tn+=1
+      else:
+        fn+=1
+precision=(tp)/(tp+fp)
+recall=(tp)/(tp+fn)
+print(precision)
+print(recall)
+
+##########################TEXT-NAIVE-BAYESIAN-CLASSIFIER
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn import metrics
+data=pd.read_csv("text_classification.csv", names=['message', 'label'])
+print("Dimensions:", data.shape)
+data['labelnum']=data.label.map({'pos':1, 'neg':0})
+x=data.message
+y=data.labelnum
+xtrain, xtest, ytrain, ytest=train_test_split(x,y)
+print('\n total training samples:', ytrain.shape)
+print('\n total test data:', ytest.shape)
+cv=CountVectorizer()
+xtrain_dt=cv.fit_transform(xtrain)
+xtest_dt=cv.transform(xtest)
+print('\n words in text document is:\n')
+print(cv.get_feature_names())
+df=pd.DataFrame(xtrain_dt.toarray(), columns=cv.get_feature_names())
+#training
+clf=MultinomialNB().fit(xtrain_dt, ytrain)
+predicted=clf.predict(xtest_dt)
+#printing accuracy, confusion matrix, precision and recall
+print('\n Accuracy of the classifier is:', metrics.accuracy_score(ytest, predicted))
+print('\n Confusion matrix')
+print(metrics.confusion_matrix(ytest, predicted))
+print('\n Precision', metrics.precision_score(ytest, predicted))
+print('\n Recall', metrics.recall_score(ytest, predicted))
+
+############################FIND-S
+import pandas as pd
+df=pd.read_csv("D:\ML_LAB\ENJOYSPORT.csv")
+df
+h=["","","","","",""]
+for index, row in df.iterrows():
+    ind=0
+    if row["EnjoySport"]==1:
+        for i in range(len(row)-1):
+            if h[ind]=='?':
+                ind+=1
+                continue
+            elif h[ind]=="":
+                h[ind]=row[i]
+            elif h[ind]==row[i]:
+                ind+=1
+                continue
+            elif h[ind]!=row[i]:
+                h[ind]='?'
+            ind+=1
+print(h)
+
+#############################CANDIDATE-ELIMINATION
+import pandas as pd
+import numpy as np
+df=pd.read_csv("D:\ML_LAB\ENJOYSPORT.csv")
+df
+h=["","","","","",""]
+arr=np.array(df)
+feature=np.array(df.iloc[:,0:6])
+target=np.array(df.iloc[:,-1])
+s=[0,0,0,0,0,0]
+g=[['?' for j in range(len(s))] for i in range(len(s))]
+for i in range(0,len(feature)):
+  if target[i]==1:
+    for j in range(len(s)):
+      if feature[i][j]!=s[j] and i==0:
+        s[j]=feature[i][j]
+      elif feature[i][j]!=s[j]:
+        s[j]='?'
+        g[i][j]='?'
+  if target[i]==0:
+    for j in range(len(s)):
+      if feature[i][j]!=s[j]:
+        g[j][j]=s[j]
+      else:
+        g[j][j]='?'
+print(s)
+print(g)
