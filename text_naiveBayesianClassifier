@@ -1,0 +1,44 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn import metrics
+
+data=pd.read_csv("text_classification.csv", names=['message', 'label'])
+print("Dimensions:", data.shape)
+data['labelnum']=data.label.map({'pos':1, 'neg':0})
+x=data.message
+y=data.labelnum
+
+
+xtrain, xtest, ytrain, ytest=train_test_split(x,y)
+
+print('\n total training samples:', ytrain.shape)
+print('\n total test data:', ytest.shape)
+
+cv=CountVectorizer()
+xtrain_dt=cv.fit_transform(xtrain)
+xtest_dt=cv.transform(xtest)
+print('\n words in text document is:\n')
+print(cv.get_feature_names())
+df=pd.DataFrame(xtrain_dt.toarray(), columns=cv.get_feature_names())
+
+
+
+#training
+clf=MultinomialNB().fit(xtrain_dt, ytrain)
+predicted=clf.predict(xtest_dt)
+
+
+
+
+#printing accuracy, confusion matrix, precision and recall
+print('\n Accuracy of the classifier is:', metrics.accuracy_score(ytest, predicted))
+print('\n Confusion matrix')
+print(metrics.confusion_matrix(ytest, predicted))
+print('\n Precision', metrics.precision_score(ytest, predicted))
+print('\n Recall', metrics.recall_score(ytest, predicted))
+
+
+
+
